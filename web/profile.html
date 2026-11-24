@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KelasaPass profile</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --navy:#1B1F6B; --orange:#FD9B36; --cream:#F8F2E4; --ok:#1f8a4c; --bad:#c0392b; --muted:#6B6459; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, "Noto Sans Kannada", "Noto Sans Devanagari", sans-serif; background:var(--cream); color:#111; }
+  .wrap { max-width:720px; margin:0 auto; padding:16px; }
+  .card { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:16px; margin-bottom:14px; }
+  .top { display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:var(--navy); color:#fff; }
+  .top h1 { margin:0 0 4px; color:var(--orange); } #qr { background:#fff; padding:6px; border-radius:8px; margin-left:auto; }
+  .stats { display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; } .stat { background:rgba(255,255,255,.12); padding:6px 10px; border-radius:8px; }
+  .lvl { display:inline-block; padding:1px 8px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }
+  .L0 { background:#8a8a8a; } .L1 { background:#2A5BC8; } .L2 { background:#d17a12; } .L3 { background:var(--ok); }
+  .cred { border:1px solid #e5dcc8; border-radius:10px; padding:10px; margin:8px 0; }
+  .cred.weak { opacity:.6; } .flag { color:var(--bad); font-size:13px; } .muted { color:var(--muted); font-size:13px; }
+  button { font:inherit; padding:6px 10px; border:0; border-radius:8px; background:var(--orange); font-weight:600; cursor:pointer; margin-right:6px; }
+  button.ghost { background:#eee; } .ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card top" id="head">Loading...</div>
+  <div class="card">
+    <b>How to read this:</b> each entry is a W3C Verifiable Credential signed by the KelasaPass issuer
+    (<span id="did" class="muted"></span>). Anyone can check the signature. The evidence level says how strong the proof is:
+    <span class="lvl L0">L0</span> phone-verified employer, <span class="lvl L1">L1</span> business ID,
+    <span class="lvl L2">L2</span> UPI payment, <span class="lvl L3">L3</span> + geotagged photo. Flagged entries count for almost nothing.
+  </div>
+  <div id="creds"></div>
+</div>
+<script>
+const id = location.pathname.split("/").pop();
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function verify(jwt, out) {
+  const r = await (await fetch("/api/verify", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({jwt})})).json();
+  out.innerHTML = r.valid ? `<span class="ok">Signature valid</span> <span class="muted">issued by ${esc(r.payload.issuer)}${r.revoked ? " (revoked)" : ""}</span>`
+                          : `<span class="bad">Invalid: ${esc(r.reason)}</span>`;
+}
+(async () => {
+  const st = await (await fetch("/api/status")).json(); document.getElementById("did").textContent = st.issuer;
+  const r = await fetch(`/api/workers/${id}/profile`);
+  if (!r.ok) { document.getElementById("head").textContent = "Profile not found"; return; }
+  const p = await r.json(), w = p.worker;
+  document.getElementById("head").innerHTML = `<div><h1>${esc(w.name)}</h1>
+    <div>${esc(w.trade)} · ${esc(w.locality)} · ${w.years ?? "?"} yrs (self-declared) · Rs ${w.daily_rate ?? "?"}/day</div>
+    <div class="stats"><div class="stat"><b>${p.verified_jobs}</b> verified jobs</div><div class="stat">proof score <b>${p.proof_score}</b></div></div></div><div id="qr"></div>`;
+  if (window.QRCode) new QRCode(document.getElementById("qr"), {text: location.href, width: 110, height: 110});
+  const box = document.getElementById("creds");
+  if (!p.credentials.length) box.innerHTML = `<div class="card muted">No verified jobs yet. Each employer-confirmed job adds one.</div>`;
+  p.credentials.forEach(c => {
+    const d = document.createElement("div"); d.className = "card cred" + (c.weight < 0.2 ? " weak" : "");
+    d.innerHTML = `<span class="lvl L${c.evidence_level}">L${c.evidence_level}</span> <b>${esc(c.trade)}</b> job confirmed by
+      <b>${esc(c.employer_name)}</b> (${esc(c.employer_level)}) <span class="muted">· ${c.issued_at.slice(0,10)} · weight ${c.weight}</span>
+      ${c.flags.length ? `<div class="flag">Fraud flags: ${c.flags.join(", ")}</div>` : ""}<div class="out muted"></div>`;
+    const v = document.createElement("button"); v.textContent = "Verify signature";
+    const t = document.createElement("button"); t.textContent = "Tamper test"; t.className = "ghost";
+    const out = d.querySelector(".out");
+    v.onclick = () => verify(c.jwt, out);
+    // flip one character in the payload: the signature must fail
+    t.onclick = () => { const [h, pl, s] = c.jwt.split("."); const i = Math.floor(pl.length / 2);
+      verify([h, pl.slice(0, i) + (pl[i] === "A" ? "B" : "A") + pl.slice(i + 1), s].join("."), out); };
+    d.appendChild(v); d.appendChild(t); box.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>

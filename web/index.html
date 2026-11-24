@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KelasaPass demo console</title>
+<style>
+  :root { --navy:#1B1F6B; --orange:#FD9B36; --cream:#F8F2E4; --ink:#111; --muted:#6B6459; --ok:#1f8a4c; --bad:#c0392b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, "Noto Sans Kannada", "Noto Sans Devanagari", sans-serif; background:var(--cream); color:var(--ink); }
+  header { background:var(--navy); color:#fff; padding:14px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; } header h1 span { color:var(--orange); }
+  header .tag { opacity:.85; font-size:14px; } header button { margin-left:auto; }
+  main { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px; padding:16px; }
+  section { background:#fff; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); display:flex; flex-direction:column; min-height:560px; }
+  section h2 { margin:0; padding:12px 16px; font-size:16px; background:var(--navy); color:var(--orange); border-radius:14px 14px 0 0; }
+  .chat { flex:1; padding:12px; overflow-y:auto; background:#efe7d6; display:flex; flex-direction:column; gap:8px; max-height:420px; }
+  .b { max-width:85%; padding:8px 11px; border-radius:10px; font-size:14px; line-height:1.4; white-space:pre-wrap; }
+  .me { align-self:flex-end; background:#dcf8c6; } .bot { align-self:flex-start; background:#fff; }
+  .warn { background:#fde2e1; border:1px solid var(--bad); }
+  .row { display:flex; gap:6px; padding:10px; border-top:1px solid #eee; flex-wrap:wrap; }
+  input, select, textarea { font:inherit; padding:8px; border:1px solid #ccc; border-radius:8px; }
+  textarea { flex:1; min-width:180px; height:54px; resize:vertical; }
+  button { font:inherit; padding:8px 12px; border:0; border-radius:8px; background:var(--orange); color:var(--ink); font-weight:600; cursor:pointer; }
+  button.secondary { background:var(--navy); color:#fff; } button.ghost { background:#eee; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; padding:8px 10px 0; }
+  .chips button { font-size:12px; font-weight:500; padding:5px 8px; background:#f3ead6; }
+  .match { border:1px solid #e5dcc8; border-radius:10px; padding:8px; margin:6px 0; background:#fff; font-size:13px; }
+  .match b { color:var(--navy); } .score { float:right; color:var(--muted); }
+  .panel { padding:12px; font-size:14px; overflow-y:auto; }
+  .lvl { display:inline-block; padding:1px 7px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }
+  .L0 { background:#8a8a8a; } .L1 { background:#2A5BC8; } .L2 { background:#d17a12; } .L3 { background:var(--ok); }
+  .flag { color:var(--bad); font-size:12px; }
+  .log { font-family:ui-monospace, monospace; font-size:12px; color:var(--muted); border-top:1px solid #eee; padding-top:8px; }
+  a { color:var(--navy); font-weight:600; }
+  label.small { font-size:13px; display:flex; gap:4px; align-items:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kelasa<span>Pass</span></h1>
+  <div class="tag">Every finished job becomes proof. WhatsApp-style demo console (Tumakuru).</div>
+  <button class="secondary" id="seedBtn">Reset + load demo data</button>
+</header>
+<main>
+  <!-- Worker phone -->
+  <section>
+    <h2>1. Worker phone (WhatsApp)</h2>
+    <div class="chat" id="wChat"></div>
+    <div class="chips">
+      <button data-w="ನಾನು ಎಲೆಕ್ಟ್ರಿಷಿಯನ್, 8 ವರ್ಷ ಅನುಭವ, ಎಸ್ ಎಸ್ ಪುರಂ, ದಿನಕ್ಕೆ 800 ರೂಪಾಯಿ">Kannada electrician</button>
+      <button data-w="मैं प्लंबर हूँ, 4 साल, शेट्टिहल्ली shettihalli, 750 रुपये">Hindi plumber</button>
+      <button data-w="Painter, 3 years, Batawadi, Rs 650">English painter</button>
+    </div>
+    <div class="row">
+      <input id="wName" value="Ramesh K" style="width:110px" title="Worker name">
+      <textarea id="wText" placeholder="Type what the voice note says (or record)"></textarea>
+      <button id="wSend">Send</button>
+      <button class="ghost" id="wMic" title="Needs ElevenLabs key">Record</button>
+    </div>
+  </section>
+
+  <!-- Employer phone -->
+  <section>
+    <h2>2. Employer phone (WhatsApp)</h2>
+    <div class="chat" id="eChat"></div>
+    <div class="chips">
+      <button data-e="Need 2 electricians at SS Puram tomorrow, Rs 900">Post: 2 electricians</button>
+      <button data-e="ನಾಳೆ ಕ್ಯಾತಸಂದ್ರದಲ್ಲಿ 2 ಗಾರೆ ಕೆಲಸಗಾರರು ಬೇಕು kyathasandra, ದಿನಕ್ಕೆ 1000 ರೂಪಾಯಿ">Kannada: masons</button>
+      <button data-e="Job guaranteed! Pay Rs 500 registration fee first">Scam attempt</button>
+    </div>
+    <div class="row">
+      <select id="eSel" title="Employer"></select>
+      <textarea id="eText" placeholder="Describe the job"></textarea>
+      <button id="eSend">Send</button>
+    </div>
+  </section>
+
+  <!-- Trust panel -->
+  <section>
+    <h2>3. Trust and fraud panel</h2>
+    <div class="panel" id="trust">
+      <p>Credentials carry an <b>evidence level</b> instead of stars:
+        <span class="lvl L0">L0</span> phone only, <span class="lvl L1">L1</span> business ID,
+        <span class="lvl L2">L2</span> UPI payment, <span class="lvl L3">L3</span> + geotagged photo.</p>
+      <p>Fake proof is cheap, so we make it worthless. Stage an attack: a brand-new "employer" on the worker's own phone confirms 5 jobs in minutes.</p>
+      <div class="row" style="border:0;padding:0">
+        <select id="atkSel"></select>
+        <button id="atkBtn" class="secondary">Stage collusion attack</button>
+      </div>
+      <div id="atkOut"></div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const api = async (path, body) => {
+  const r = await fetch(path, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+};
+const bubble = (chat, text, cls) => { const d = document.createElement("div"); d.className = "b " + cls; d.innerHTML = text; $(chat).appendChild(d); $(chat).scrollTop = 1e9; return d; };
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let pendingWorker = null, currentJob = null;
+
+async function loadPeople() {
+  const emps = await api("/api/employers");
+  $("eSel").innerHTML = emps.map(e => `<option value="${e.id}">${esc(e.name)} (${e.level})</option>`).join("");
+  const ws = await api("/api/workers");
+  $("atkSel").innerHTML = ws.filter(w => w.confirmed).map(w => `<option value="${w.id}">${esc(w.name)} (${w.trade})</option>`).join("");
+  refreshLog();
+}
+async function refreshLog() {
+  const ev = await api("/api/events");
+  $("log").innerHTML = "<b>Event log</b><br>" + ev.slice(0, 12).map(e => `${e.t.slice(11,19)} ${e.type}${e.flags && e.flags.length ? " [" + e.flags.join(", ") + "]" : ""}`).join("<br>");
+}
+
+// ----- worker -----
+async function workerSend(text) {
+  bubble("wChat", esc(text), "me");
+  const res = await api("/api/workers", {name:$("wName").value, phone:"+91-9" + Date.now() % 1e9, text, device_id:"dev-" + $("wName").value});
+  showWorkerReply(res);
+}
+function showWorkerReply(res) {
+  if (res.transcript) bubble("wChat", "Heard: " + esc(res.transcript), "bot");
+  const b = bubble("wChat", esc(res.reply), "bot");
+  if (res.ok) {
+    pendingWorker = res.worker.id;
+    const yes = document.createElement("button"); yes.textContent = "1 (Yes)"; yes.style.marginTop = "6px";
+    yes.onclick = async () => { yes.remove(); bubble("wChat", "1", "me"); await api(`/api/workers/${pendingWorker}/confirm`, {});
+      bubble("wChat", `ಪ್ರೊಫೈಲ್ ಸಿದ್ಧವಾಗಿದೆ (profile ready): <a href="/p/${pendingWorker}" target="_blank">open shareable profile</a>`, "bot"); loadPeople(); };
+    b.appendChild(document.createElement("br")); b.appendChild(yes);
+  }
+}
+$("wSend").onclick = () => { const t = $("wText").value.trim(); if (t) { $("wText").value = ""; workerSend(t).catch(e => bubble("wChat", esc(e.message), "bot warn")); } };
+document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => { $("wText").value = b.dataset.w; });
+
+// optional voice recording (needs ElevenLabs keys on the server)
+let rec = null;
+$("wMic").onclick = async () => {
+  const st = await api("/api/status");
+  if (!st.voice_stt) { bubble("wChat", "Voice is off on this server (set ElevenLabs keys). Type the voice note text instead.", "bot warn"); return; }
+  if (rec) { rec.stop(); return; }
+  const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+  const chunks = []; rec = new MediaRecorder(stream);
+  rec.ondataavailable = e => chunks.push(e.data);
+  rec.onstop = async () => {
+    $("wMic").textContent = "Record"; rec = null; stream.getTracks().forEach(t => t.stop());
+    const fd = new FormData(); fd.append("role", "worker"); fd.append("name", $("wName").value);
+    fd.append("audio", new Blob(chunks, {type:"audio/webm"}), "note.webm");
+    bubble("wChat", "[voice note]", "me");
+    const r = await fetch("/api/voice", {method:"POST", body:fd}); showWorkerReply(await r.json());
+  };
+  rec.start(); $("wMic").textContent = "Stop";
+};
+
+// ----- employer -----
+async function employerSend(text) {
+  bubble("eChat", esc(text), "me");
+  const res = await api("/api/jobs", {employer_id:$("eSel").value, text});
+  if (res.blocked) { bubble("eChat", "BLOCKED by scam guard. Workers would hear:<br>" + esc(res.warnings.kn) + "<br>" + esc(res.warnings.hi), "bot warn"); refreshLog(); return; }
+  bubble("eChat", esc(res.reply), "bot");
+  if (!res.ok) return;
+  currentJob = res.job;
+  const matches = await api(`/api/jobs/${currentJob.id}/matches`);
+  const d = bubble("eChat", `<b>Top matches</b> (skill + distance + verified history + rate):`, "bot");
+  if (!matches.length) d.innerHTML += "<br>No matching workers yet.";
+  matches.slice(0, 4).forEach(m => {
+    const el = document.createElement("div"); el.className = "match";
+    el.innerHTML = `<span class="score">score ${m.score}</span><b>${esc(m.worker.name)}</b> · ${m.worker.trade}<br>${m.reasons.map(esc).join(" · ")}<br>
+      <a href="/p/${m.worker.id}" target="_blank">profile</a> `;
+    const hire = document.createElement("button"); hire.textContent = "Hire"; hire.style.marginTop = "4px";
+    hire.onclick = () => hireFlow(m.worker, el, hire); el.appendChild(hire); d.appendChild(el);
+  });
+  refreshLog();
+}
+async function hireFlow(worker, el, btn) {
+  btn.remove();
+  await api(`/api/jobs/${currentJob.id}/accept`, {worker_id:worker.id});
+  bubble("wChat", `Job alert: ${currentJob.trade}, ${currentJob.locality}, Rs ${currentJob.wage ?? "?"}/day. You accepted.`, "bot");
+  const f = document.createElement("div");
+  f.innerHTML = `<b>After the job:</b> did ${esc(worker.name)} finish?<br>
+    <label class="small"><input type="checkbox" id="fOn" checked> on time</label>
+    <label class="small"><input type="checkbox" id="fRe" checked> would hire again</label>
+    <label class="small">UPI ref <input id="fUpi" placeholder="12 digits (optional)" style="width:150px"></label>
+    <label class="small"><input type="checkbox" id="fPhoto"> geotagged photo at site</label>`;
+  const done = document.createElement("button"); done.textContent = "Confirm job done"; done.className = "secondary";
+  f.appendChild(done); el.appendChild(f);
+  done.onclick = async () => {
+    const body = {worker_id:worker.id, on_time:$("fOn").checked, rehire:$("fRe").checked, upi_ref:$("fUpi").value || null};
+    if ($("fPhoto").checked) { body.photo_lat = currentJob.lat; body.photo_lon = currentJob.lon; }
+    const r = await api(`/api/jobs/${currentJob.id}/complete`, body);
+    const c = r.credential;
+    f.innerHTML = `Credential issued <span class="lvl L${c.evidence_level}">L${c.evidence_level}</span> weight ${c.weight}
+      ${c.flags.length ? '<span class="flag">flags: ' + c.flags.join(", ") + "</span>" : ""} · <a href="/p/${worker.id}" target="_blank">view signed proof</a>`;
+    bubble("wChat", `New verified job added to your profile: <a href="/p/${worker.id}" target="_blank">open</a>`, "bot");
+    refreshLog();
+  };
+}
+$("eSend").onclick = () => { const t = $("eText").value.trim(); if (t) { $("eText").value = ""; employerSend(t).catch(e => bubble("eChat", esc(e.message), "bot warn")); } };
+document.querySelectorAll("[data-e]").forEach(b => b.onclick = () => { $("eText").value = b.dataset.e; });
+
+// ----- attack -----
+$("atkBtn").onclick = async () => {
+  const r = await api(`/api/demo/collusion/${$("atkSel").value}`, {});
+  $("atkOut").innerHTML = "<b>5 fake confirmations:</b>" + r.credentials.map(c =>
+    `<div class="match"><span class="lvl L${c.evidence_level}">L${c.evidence_level}</span> weight <b>${c.weight}</b> <span class="flag">${c.flags.join(", ")}</span></div>`).join("") +
+    `<p>Total weight added: <b>${r.credentials.reduce((s, c) => s + c.weight, 0).toFixed(3)}</b> (one honest L3 job = 1.0). <a href="/p/${$("atkSel").value}" target="_blank">See profile</a></p>`;
+  refreshLog();
+};
+
+$("seedBtn").onclick = async () => { await api("/api/seed", {}); $("wChat").innerHTML = $("eChat").innerHTML = $("atkOut").innerHTML = ""; await loadPeople();
+  bubble("eChat", "Demo data loaded: 6 workers, 3 employers in Tumakuru.", "bot"); };
+loadPeople().then(async () => { if (!$("eSel").options.length) $("seedBtn").click(); });
+</script>
+</body>
+</html>
