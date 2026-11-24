@@ -1,4 +1,7 @@
 """KelasaPass API: web demo console, WhatsApp (Twilio) webhook, did:web issuer."""
+import base64
+import hashlib
+import hmac
 import os
 import uuid
 from pathlib import Path
@@ -8,6 +11,7 @@ import requests
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from . import credentials, voice
 from .seed import seed
@@ -189,7 +193,8 @@ async def api_voice(role: str = Form(...), name: str = Form("Worker"), phone: st
                     employer_id: str = Form(None), audio: UploadFile = File(...)):
     if not voice.enabled():
         raise HTTPException(400, "Voice is off: set ELEVENLABS_API_KEY and ELEVENLABS_STT_MODEL (see .env.example)")
-    text = voice.transcribe(await audio.read(), audio.filename or "note.webm", audio.content_type or "audio/webm")
+    text = await run_in_threadpool(voice.transcribe, await audio.read(), audio.filename or "note.webm",
+                                   audio.content_type or "audio/webm")
     if role == "employer":
         return dict(svc.job_from_text(employer_id, text), transcript=text)
     return dict(svc.worker_from_text(name, phone, text), transcript=text)
@@ -223,9 +228,28 @@ def _voice_reply(text: str) -> str | None:
     return f"{base}/media/{name}"
 
 
+def _twilio_signature_ok(url: str, params: dict, signature: str) -> bool:
+    """Twilio request validation: base64(HMAC-SHA1(auth_token, url + sorted key/value pairs))."""
+    token = os.getenv("TWILIO_AUTH_TOKEN")
+    if not token:
+        return True  # local demo / tests: validation is on as soon as the auth token is configured
+    data = url + "".join(k + params[k] for k in sorted(params))
+    expected = base64.b64encode(hmac.new(token.encode(), data.encode(), hashlib.sha1).digest()).decode()
+    return hmac.compare_digest(expected, signature or "")
+
+
 @app.post("/webhook/twilio")
 async def twilio_webhook(request: Request):
-    form = await request.form()
+    form = {k: str(v) for k, v in (await request.form()).items()}
+    base = os.getenv("PUBLIC_BASE_URL")
+    url = f"{base}{request.url.path}" if base else str(request.url)
+    if not _twilio_signature_ok(url, form, request.headers.get("X-Twilio-Signature", "")):
+        raise HTTPException(403, "invalid Twilio signature")
+    # transcription, TTS and media download are blocking HTTP calls: keep them off the event loop
+    return await run_in_threadpool(_handle_whatsapp, form)
+
+
+def _handle_whatsapp(form: dict) -> Response:
     phone = form.get("From", "")
     text = (form.get("Body") or "").strip()
     if int(form.get("NumMedia", 0) or 0) > 0 and voice.enabled():

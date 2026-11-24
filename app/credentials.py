@@ -103,5 +103,5 @@ def verify(token: str) -> dict:
         return {"valid": True, "payload": json.loads(b64u_decode(p))}
     except InvalidSignature:
         return {"valid": False, "reason": "signature does not match issuer key"}
-    except Exception as e:  # malformed token
+    except (ValueError, TypeError, AttributeError) as e:  # malformed token (bad base64, JSON or shape)
         return {"valid": False, "reason": f"malformed credential: {e.__class__.__name__}"}

@@ -6,6 +6,7 @@ the bot always reads the result back for a yes/no, because speech recognition
 on noisy dialect voice notes is never 100% right.
 """
 import json
+import logging
 import os
 import re
 
@@ -32,19 +33,19 @@ def detect_lang(text: str) -> str:
 
 
 def _years(t: str):
-    m = re.search(r"(\d{1,2})\s*" + YEAR_WORDS, t, re.I)
+    m = re.search(r"(\d{1,2})\s*" + YEAR_WORDS, t, re.IGNORECASE)
     return int(m.group(1)) if m else None
 
 
 def _money(t: str):
-    m = re.search(MONEY_WORDS + r"\s*(\d{3,5})", t, re.I) or re.search(r"(\d{3,5})\s*" + MONEY_WORDS, t, re.I)
+    m = re.search(MONEY_WORDS + r"\s*(\d{3,5})", t, re.IGNORECASE) or re.search(r"(\d{3,5})\s*" + MONEY_WORDS, t, re.IGNORECASE)
     return int(m.group(1)) if m else None
 
 
 def _count(t: str):
     """First small number (1-20) that is not a year count or an amount, e.g. "2 electricians"."""
     for m in re.finditer(r"(?<!\d)(\d{1,2})(?!\d)", t):
-        if re.match(r"\s*" + YEAR_WORDS, t[m.end():], re.I):
+        if re.match(r"\s*" + YEAR_WORDS, t[m.end():], re.IGNORECASE):
             continue
         if 1 <= int(m.group(1)) <= 20:
             return int(m.group(1))
@@ -64,7 +65,7 @@ def rule_extract(text: str, kind: str) -> dict:
     else:
         out["wage"] = _money(t)
         out["workers_needed"] = _count(t)
-        out["when"] = "tomorrow" if re.search(r"tomorrow|ನಾಳೆ|कल", t, re.I) else "today"
+        out["when"] = "tomorrow" if re.search(r"tomorrow|ನಾಳೆ|कल", t, re.IGNORECASE) else "today"
     return out
 
 
@@ -97,8 +98,9 @@ def bedrock_extract(text: str, kind: str):
 def extract(text: str, kind: str) -> dict:
     try:
         data = bedrock_extract(text, kind)
-    except Exception:
-        data = None  # fall back to rules if Bedrock is misconfigured or returns bad JSON
+    except Exception as e:  # noqa: BLE001 - any Bedrock/boto/JSON failure falls back to the rule extractor
+        logging.getLogger(__name__).warning("Bedrock extraction failed, using rules: %s", e)
+        data = None
     base = rule_extract(text, kind)
     if data:
         base.update({k: v for k, v in data.items() if v is not None})

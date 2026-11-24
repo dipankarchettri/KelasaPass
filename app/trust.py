@@ -83,4 +83,4 @@ SCAM_WARNING = {
 
 
 def is_fee_request(text: str) -> bool:
-    return any(re.search(p, text, re.I) for p in FEE_PATTERNS)
+    return any(re.search(p, text, re.IGNORECASE) for p in FEE_PATTERNS)

@@ -5,11 +5,11 @@ TMP = tempfile.mkdtemp()
 os.environ["DB_PATH"] = os.path.join(TMP, "test.db")
 os.environ["ISSUER_KEY_PATH"] = os.path.join(TMP, "key.pem")
 
-from fastapi.testclient import TestClient  # noqa: E402
+from fastapi.testclient import TestClient
 
-from app import credentials, trust  # noqa: E402
-from app.extract import extract  # noqa: E402
-from app.main import app  # noqa: E402
+from app import credentials, trust
+from app.extract import extract
+from app.main import app
 
 client = TestClient(app)
 
@@ -71,3 +71,17 @@ def test_whatsapp_webhook_readback_and_confirm():
 def test_did_document_exposes_ed25519_key():
     doc = client.get("/.well-known/did.json").json()
     assert doc["verificationMethod"][0]["publicKeyJwk"]["crv"] == "Ed25519"
+
+
+def test_twilio_signature_enforced_when_token_set(monkeypatch):
+    import base64
+    import hashlib
+    import hmac
+
+    monkeypatch.setenv("TWILIO_AUTH_TOKEN", "test-token")
+    monkeypatch.setenv("PUBLIC_BASE_URL", "https://kelasapass.example")
+    form = {"From": "whatsapp:+910000000009", "Body": "hello"}
+    assert client.post("/webhook/twilio", data=form).status_code == 403
+    data = "https://kelasapass.example/webhook/twilio" + "".join(k + form[k] for k in sorted(form))
+    sig = base64.b64encode(hmac.new(b"test-token", data.encode(), hashlib.sha1).digest()).decode()
+    assert client.post("/webhook/twilio", data=form, headers={"X-Twilio-Signature": sig}).status_code == 200
