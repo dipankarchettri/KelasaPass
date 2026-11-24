@@ -23,6 +23,11 @@ svc = Service()
 # ---------- pages ----------
 @app.get("/")
 def index():
+    return FileResponse(WEB / "app.html")
+
+
+@app.get("/console")
+def console():
     return FileResponse(WEB / "index.html")
 
 

@@ -36,7 +36,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Open http://localhost:8000. Demo data for Tumakuru loads automatically.
+Open http://localhost:8000 for the phone app (worker and contractor side by side). The older developer console is at http://localhost:8000/console. Demo data for Tumakuru loads automatically.
 
 **Demo script**
 1. **Worker phone:** pick "Kannada electrician", send, and the bot reads the profile back in Kannada. Tap **1 (Yes)**.
