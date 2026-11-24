@@ -7,6 +7,8 @@ KelasaPass (*kelasa* is Kannada for "work") is a voice-first job matching and wo
 > wHACKiest 2026 · Track 4 **UnlockED** · Problems **4.1** (Localized Vocational Skill Verification) and **4.3** (Hyper-Local Job Matching)
 > Team **Essential Engineers**, Shridevi Institute of Engineering and Technology, Tumkur
 
+**▶ [Watch the 3-minute pitch and demo](https://youtu.be/il9WqZBGC0w)**
+
 ![Worker app and contractor app side by side: ranked matches with reasons](docs/2-ranked-matches.png)
 
 ## The problem
