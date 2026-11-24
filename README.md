@@ -33,14 +33,14 @@ Nobody gives the worker **portable proof of the work they have actually done**.
 | 3. Match | Gets the job alert and accepts it | Sends an offer to the best match |
 | 4. Prove | Receives a signed credential and a higher proof score | Taps "finished, on time, would hire again", optionally with a UPI reference |
 
-**No app to install.** Workers use only WhatsApp: voice notes in, voice and text replies out, and their proof is a web link with a QR code. Employers can post by WhatsApp as well; contractors who hire often can also use a lightweight web dashboard opened from a link. No typing and no English needed, and the worker never pays.
+**No app to install.** Workers use only WhatsApp: voice notes in, voice and text replies out, and their proof is a web link with a QR code. Employers use a lightweight web dashboard opened from a link, with WhatsApp posting planned so they need nothing else either. No typing and no English needed, and the worker never pays.
 
 ### Channels
 
 | Who | Channel | Install needed |
 |---|---|---|
 | Worker | WhatsApp voice notes and replies (`/webhook/twilio`) | None |
-| Employer | WhatsApp, or the optional web dashboard | None (opens from a link) |
+| Employer | Web dashboard opened from a link; WhatsApp posting is next | None |
 | Anyone checking proof | Public QR profile page with signature check (`/p/<worker_id>`) | None |
 
 The screenshots below come from the **demo simulator** (`web/app.html`), which shows the worker's WhatsApp journey and the contractor dashboard side by side as phone screens.
@@ -163,6 +163,7 @@ Copy `.env.example` to `.env` and set what you need:
 - **Mocked:** the Udyam/GST business check (a flag on the employer), UPI payment matching (12-digit format check only) and photo geotags (coordinates passed in).
 - **Approximate:** locality coordinates are demo values around Tumakuru.
 - **Indicative:** NCO-2015 codes in `app/trades.py` need checking against the official list.
+- **WhatsApp coverage:** the webhook handles worker onboarding end to end (voice note, transcription, read-back, confirm, profile link). Job alerts, accepting offers and employer posting run through the same API in the demo simulator; sending them over WhatsApp is the next step.
 - **Not built yet:** the optional 30-second AI video pre-screen. It will only ever be labelled as a pre-screen and never issue a credential.
 
 ## Team Essential Engineers
