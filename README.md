@@ -9,7 +9,9 @@ KelasaPass (*kelasa* is Kannada for "work") is a voice-first job matching and wo
 
 **▶ [Watch the 3-minute pitch and demo](https://youtu.be/il9WqZBGC0w)**
 
-![Worker app and contractor app side by side: ranked matches with reasons](docs/2-ranked-matches.png)
+![Demo simulator: the worker's WhatsApp flow (left) and the contractor view (right), with ranked matches and reasons](docs/2-ranked-matches.png)
+
+*The demo shows both sides of the flow as phone screens. Workers never install an app: in production everything on the left happens inside WhatsApp.*
 
 ## The problem
 
@@ -31,7 +33,17 @@ Nobody gives the worker **portable proof of the work they have actually done**.
 | 3. Match | Gets the job alert and accepts it | Sends an offer to the best match |
 | 4. Prove | Receives a signed credential and a higher proof score | Taps "finished, on time, would hire again", optionally with a UPI reference |
 
-No app to install, no typing and no English needed. The worker never pays.
+**No app to install.** Workers use only WhatsApp: voice notes in, voice and text replies out, and their proof is a web link with a QR code. Employers can post by WhatsApp as well; contractors who hire often can also use a lightweight web dashboard opened from a link. No typing and no English needed, and the worker never pays.
+
+### Channels
+
+| Who | Channel | Install needed |
+|---|---|---|
+| Worker | WhatsApp voice notes and replies (`/webhook/twilio`) | None |
+| Employer | WhatsApp, or the optional web dashboard | None (opens from a link) |
+| Anyone checking proof | Public QR profile page with signature check (`/p/<worker_id>`) | None |
+
+The screenshots below come from the **demo simulator** (`web/app.html`), which shows the worker's WhatsApp journey and the contractor dashboard side by side as phone screens.
 
 | Voice onboarding | Employer confirms the job | Verified proof on the worker's phone | Scam blocked |
 |---|---|---|---|
@@ -101,7 +113,9 @@ pip install -r requirements.txt
 uvicorn app.main:app --port 8000
 ```
 
-Open **http://localhost:8000** to see the worker app and the contractor app side by side as phones. Tumakuru demo data loads automatically.
+Open **http://localhost:8000** for the demo simulator: the worker's WhatsApp journey on the left and the contractor dashboard on the right, side by side as phone screens. It calls the same API as the WhatsApp webhook. Tumakuru demo data loads automatically.
+
+To try the real channel, connect the Twilio WhatsApp sandbox (see below) and send a voice or text note from your own phone.
 
 **Two-minute demo**
 1. **Worker phone:** tap the mic (demo mode plays a Kannada voice note). The profile is read back; tap **ಹೌದು, ಸರಿ** (yes).
@@ -140,7 +154,7 @@ Copy `.env.example` to `.env` and set what you need:
 | `app/main.py` | FastAPI routes, WhatsApp webhook, voice endpoints |
 | `app/voice.py` | ElevenLabs speech-to-text and text-to-speech |
 | `app/geo.py`, `app/trades.py`, `app/seed.py` | Tumakuru localities, trade vocabulary, demo data |
-| `web/app.html` | Worker and contractor phone apps |
+| `web/app.html` | Demo simulator: worker WhatsApp journey and contractor dashboard as phone screens |
 | `web/index.html`, `web/profile.html` | Developer console and public QR profile with signature check |
 | `tests/` | Test suite |
 
